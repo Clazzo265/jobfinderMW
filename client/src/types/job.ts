@@ -42,7 +42,7 @@ export interface JobsResponse {
 
   location: string;
 
-  page: number;
-
   jobs: Job[];
+
+  nextCursor?: string;
 }

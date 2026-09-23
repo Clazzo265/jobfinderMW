@@ -1,7 +1,10 @@
 export interface Job {
   id: string;
+
   title: string;
+
   companyName: string;
+
   companyLogo?: string;
 
   location: {
@@ -28,4 +31,9 @@ export interface Job {
   applyUrl: string;
 
   source?: string;
+}
+
+export interface JobSearchResult {
+  jobs: Job[];
+  nextCursor?: string;
 }

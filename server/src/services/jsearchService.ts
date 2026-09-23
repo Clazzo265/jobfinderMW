@@ -1,19 +1,30 @@
 import axios from "axios";
-import type { Job } from "../types/job.js";
+
+import type {
+  Job,
+  JobSearchResult,
+} from "../types/job.js";
 
 const JSEARCH_HOST =
-  process.env.RAPIDAPI_HOST || "jsearch.p.rapidapi.com";
+  process.env.RAPIDAPI_HOST ||
+  "jsearch.p.rapidapi.com";
 
-const JSEARCH_URL = "https://" + JSEARCH_HOST;
+const JSEARCH_URL =
+  `https://${JSEARCH_HOST}`;
 
 interface JSearchJob {
   job_id: string;
+
   job_title: string;
+
   employer_name: string;
+
   employer_logo?: string | null;
 
   job_city?: string | null;
+
   job_state?: string | null;
+
   job_country?: string | null;
 
   job_employment_type?: string | null;
@@ -21,8 +32,11 @@ interface JSearchJob {
   job_description?: string | null;
 
   job_min_salary?: number | null;
+
   job_max_salary?: number | null;
+
   job_salary_currency?: string | null;
+
   job_salary_period?: string | null;
 
   job_posted_at_datetime_utc?: string | null;
@@ -36,17 +50,22 @@ interface JSearchJob {
 
 interface JSearchResponse {
   status?: string;
+
   request_id?: string;
 
   parameters?: {
     query?: string;
+
     num_pages?: number;
+
     country?: string;
+
     language?: string;
   };
 
   data?: {
     jobs?: JSearchJob[];
+
     cursor?: string;
   };
 }
@@ -54,90 +73,130 @@ interface JSearchResponse {
 export async function searchJobs(
   query: string,
   location = "Malawi",
-  page = 1
-): Promise<Job[]> {
-  const apiKey = process.env.RAPIDAPI_KEY;
+  cursor?: string
+): Promise<JobSearchResult> {
+  const apiKey =
+    process.env.RAPIDAPI_KEY;
 
   if (!apiKey) {
-    throw new Error("RAPIDAPI_KEY is not configured");
+    throw new Error(
+      "RAPIDAPI_KEY is not configured"
+    );
   }
 
-  const searchQuery = `${query} in ${location}`;
+  const searchQuery =
+    `${query} in ${location}`;
 
-  const response = await axios.get<JSearchResponse>(
-    `${JSEARCH_URL}/search-v2`,
-    {
-      params: {
-        query: searchQuery,
-        country: "mw",
-        num_pages: 1,
+  const response =
+    await axios.get<JSearchResponse>(
+      `${JSEARCH_URL}/search-v2`,
+      {
+        params: {
+          query: searchQuery,
+
+          country: "mw",
+
+          num_pages: 1,
+
+          ...(cursor
+            ? { cursor }
+            : {}),
+        },
+
+        headers: {
+          "X-RapidAPI-Key":
+            apiKey,
+
+          "X-RapidAPI-Host":
+            JSEARCH_HOST,
+        },
+      }
+    );
+
+ 
+  const jobs =
+    response.data?.data?.jobs || [];
+
+  const mappedJobs =
+    jobs.map((job): Job => ({
+      id: job.job_id,
+
+      title: job.job_title,
+
+      companyName:
+        job.employer_name,
+
+      companyLogo:
+        job.employer_logo ||
+        undefined,
+
+      location: {
+        city:
+          job.job_city ||
+          undefined,
+
+        state:
+          job.job_state ||
+          undefined,
+
+        country:
+          job.job_country ||
+          undefined,
       },
 
-      headers: {
-        "X-RapidAPI-Key": apiKey,
-        "X-RapidAPI-Host": JSEARCH_HOST,
-      },
-    }
-  );
+      employmentType:
+        job.job_employment_type ||
+        undefined,
 
-  const jobs = response.data?.data?.jobs || [];
+      description:
+        job.job_description ||
+        "",
 
-  return jobs.map((job): Job => ({
-    id: job.job_id,
+      salary:
+        job.job_min_salary != null ||
+        job.job_max_salary != null
+          ? {
+              min:
+                job.job_min_salary ??
+                undefined,
 
-    title: job.job_title,
+              max:
+                job.job_max_salary ??
+                undefined,
 
-    companyName: job.employer_name,
+              currency:
+                job.job_salary_currency ||
+                undefined,
 
-    companyLogo:
-      job.employer_logo || undefined,
+              period:
+                job.job_salary_period ||
+                undefined,
+            }
+          : undefined,
 
-    location: {
-      city:
-        job.job_city || undefined,
+      postedAt:
+        job.job_posted_at_datetime_utc ||
+        undefined,
 
-      state:
-        job.job_state || undefined,
+      isRemote:
+        Boolean(
+          job.job_is_remote
+        ),
 
-      country:
-        job.job_country || undefined,
-    },
+      applyUrl:
+        job.job_apply_link ||
+        "",
 
-    employmentType:
-      job.job_employment_type || undefined,
+      source:
+        job.job_publisher ||
+        undefined,
+    }));
 
-    description:
-      job.job_description || "",
+  return {
+    jobs: mappedJobs,
 
-    salary:
-      job.job_min_salary != null ||
-      job.job_max_salary != null
-        ? {
-            min:
-              job.job_min_salary ?? undefined,
-
-            max:
-              job.job_max_salary ?? undefined,
-
-            currency:
-              job.job_salary_currency || undefined,
-
-            period:
-              job.job_salary_period || undefined,
-          }
-        : undefined,
-
-    postedAt:
-      job.job_posted_at_datetime_utc ||
+    nextCursor:
+      response.data?.data?.cursor ||
       undefined,
-
-    isRemote:
-      Boolean(job.job_is_remote),
-
-    applyUrl:
-      job.job_apply_link || "",
-
-    source:
-      job.job_publisher || undefined,
-  }));
+  };
 }

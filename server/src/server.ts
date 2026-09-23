@@ -1,10 +1,13 @@
 import dotenv from "dotenv";
-import app from "./app.js";
 
 dotenv.config();
 
-const PORT = process.env.PORT || 5000;
+const { default: app } = await import("./app.js");
 
-app.listen(PORT, () => {
-  console.log(`🇲🇼 JobFinder MW API running on http://localhost:${PORT}`);
+const PORT = Number(process.env.PORT) || 5000;
+
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(
+    `🇲🇼 JobFinder MW API running on port ${PORT}`
+  );
 });

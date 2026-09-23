@@ -1,7 +1,14 @@
-import type { Request, Response } from "express";
+import type {
+  Request,
+  Response,
+} from "express";
+
 import { searchJobs } from "../services/jsearchService.js";
 
-export async function getJobs(req: Request, res: Response) {
+export async function getJobs(
+  req: Request,
+  res: Response
+) {
   try {
     const query =
       typeof req.query.q === "string"
@@ -13,34 +20,52 @@ export async function getJobs(req: Request, res: Response) {
         ? req.query.location.trim()
         : "Malawi";
 
-    const page =
-      typeof req.query.page === "string"
-        ? Number(req.query.page)
-        : 1;
+    const cursor =
+      typeof req.query.cursor === "string"
+        ? req.query.cursor
+        : undefined;
 
     if (!query) {
       return res.status(400).json({
         success: false,
-        message: "Search query is required.",
+        message:
+          "Search query is required.",
       });
     }
 
-    const jobs = await searchJobs(query, location, page);
+    const result =
+      await searchJobs(
+        query,
+        location,
+        cursor
+      );
 
     return res.json({
       success: true,
-      count: jobs.length,
+
+      count:
+        result.jobs.length,
+
       query,
+
       location,
-      page,
-      jobs,
+
+      jobs:
+        result.jobs,
+
+      nextCursor:
+        result.nextCursor,
     });
   } catch (error) {
-    console.error("Job search error:", error);
+    console.error(
+      "Job search error:",
+      error
+    );
 
     return res.status(500).json({
       success: false,
-      message: "Unable to fetch jobs at the moment.",
+      message:
+        "Unable to fetch jobs at the moment.",
     });
   }
 }
